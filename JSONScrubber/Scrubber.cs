@@ -19,10 +19,9 @@ namespace JSONScrubber
             _keyLevels = new Dictionary<string, int>();
         }
 
-        public dynamic Scrub(string _samplePayload)
+        public dynamic ScrubToExpando(string _samplePayload)
         {
-            var converter = new ExpandoObjectConverter();
-            var expando = JsonConvert.DeserializeObject<ExpandoObject>(_samplePayload, converter);
+            var expando = JsonConvert.DeserializeObject<ExpandoObject>(_samplePayload, new ExpandoObjectConverter());
             var expandoDict = (IDictionary<string, object>)expando;
 
             PopulateLevels(expandoDict, 1);
@@ -31,15 +30,31 @@ namespace JSONScrubber
             return expando;
         }
 
+        public string ScrubToString(string _samplePayload)
+        {
+            var expando = ScrubToExpando(_samplePayload);            
+            var result = JsonConvert.SerializeObject(expando);
+            return result;
+        }
+
+
+        /// <summary>
+        /// Recurses through an ExpandoObject and removes Nodes where the key exists at a higher level
+        /// </summary>
+        /// <param name="dict"></param>
+        /// <param name="level"></param>
         private void RemoveNestedRepeatedFields(IDictionary<string, object> dict, int level)
         {
+            if (dict == null)
+                return; 
+
             foreach (var property in dict.Keys.ToList())
             {
                 var value = dict[property];
                 if (value is IEnumerable<dynamic>)
                 {
                     foreach (var entry in (IEnumerable<dynamic>)value)
-                    {
+                    {   
                         RemoveNestedRepeatedFields((IDictionary<string, object>)entry, level + 1);
                     }
                 }
@@ -50,8 +65,16 @@ namespace JSONScrubber
             }
         }
 
+        /// <summary>
+        /// recurses through an ExpandoObject and logs the least depth a key is detected at
+        /// </summary>
+        /// <param name="dict"></param>
+        /// <param name="level"></param>
         private void PopulateLevels(IDictionary<string,object> dict, int level)
         {
+            if (dict == null)
+                return;
+
             foreach (var property in dict.Keys.ToList())
             {
                 var value = dict[property];
