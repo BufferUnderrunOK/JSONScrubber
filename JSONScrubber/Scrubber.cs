@@ -12,87 +12,53 @@ namespace JSONScrubber
 {
     public class Scrubber 
     {
-        private IDictionary<string, int> _keyLevels;
-
         public Scrubber()
         {
-            _keyLevels = new Dictionary<string, int>();
         }
 
-        public dynamic ScrubToExpando(string _samplePayload)
+        public JObject ScrubToJObject(string _samplePayload)
         {
-            var expando = JsonConvert.DeserializeObject<ExpandoObject>(_samplePayload, new ExpandoObjectConverter());
-            var expandoDict = (IDictionary<string, object>)expando;
+            JObject jobject = JObject.Parse(_samplePayload);
+            
+            RemoveNestedRepeatedFields(jobject.Root);
 
-            PopulateLevels(expandoDict, 1);
-            RemoveNestedRepeatedFields(expandoDict, 1);
-
-            return expando;
+            return jobject;
         }
 
         public string ScrubToString(string _samplePayload)
         {
-            var expando = ScrubToExpando(_samplePayload);            
-            var result = JsonConvert.SerializeObject(expando);
+            var expando = ScrubToJObject(_samplePayload);                        
+            return expando.ToString(Formatting.None);
+        }
+
+        private void RemoveNestedRepeatedFields(JToken jobject)
+        {
+            foreach(var jtoken in jobject.Children().ToList())
+            {
+                RemoveNestedRepeatedFields(jtoken);
+                
+                var boo = DoesParentHaveSaidKey(jtoken.Parent, jtoken.Path);
+                if (boo)
+                    jobject.Remove();
+            }
+        }
+
+        private bool DoesParentHaveSaidKey(JContainer container, string tokenPath)
+        {
+            if (container == null)
+                return false;
+
+            var key = tokenPath.Split('.').LastOrDefault();
+            var result = DoesParentHaveSaidKey(container.Parent, tokenPath);
+
+            foreach (var desc in container.Descendants())
+            {
+                if (desc.Path.Length < tokenPath.Length && desc.Path.EndsWith(key)) { 
+                    result = true;
+                    break;  
+                }
+            }
             return result;
-        }
-
-
-        /// <summary>
-        /// Recurses through an ExpandoObject and removes Nodes where the key exists at a higher level
-        /// </summary>
-        /// <param name="dict"></param>
-        /// <param name="level"></param>
-        private void RemoveNestedRepeatedFields(IDictionary<string, object> dict, int level)
-        {
-            if (dict == null)
-                return; 
-
-            foreach (var property in dict.Keys.ToList())
-            {
-                var value = dict[property];
-                if (value is IEnumerable<dynamic>)
-                {
-                    foreach (var entry in (IEnumerable<dynamic>)value)
-                    {   
-                        RemoveNestedRepeatedFields((IDictionary<string, object>)entry, level + 1);
-                    }
-                }
-                if (_keyLevels[property] < level)
-                {
-                    dict.Remove(property);
-                }
-            }
-        }
-
-        /// <summary>
-        /// recurses through an ExpandoObject and logs the least depth a key is detected at
-        /// </summary>
-        /// <param name="dict"></param>
-        /// <param name="level"></param>
-        private void PopulateLevels(IDictionary<string,object> dict, int level)
-        {
-            if (dict == null)
-                return;
-
-            foreach (var property in dict.Keys.ToList())
-            {
-                var value = dict[property];
-                if (value is IEnumerable<dynamic>)
-                { 
-                    foreach(var entry in (IEnumerable<dynamic>) value) {                       
-                        PopulateLevels(((IDictionary<string, object>) entry), level + 1);
-                    }
-                }
-
-                if (!_keyLevels.ContainsKey(property))
-                {
-                    _keyLevels.Add(property, level);
-                } else if (_keyLevels[property] > level)
-                {
-                    _keyLevels[property] = level;
-                }
-            }
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Security.Cryptography;
 using System.Text;
+using Newtonsoft.Json.Linq;
 
 namespace JSONScrubber.Tests
 {
@@ -40,19 +41,19 @@ namespace JSONScrubber.Tests
         private Scrubber _scrubber;
 
         [TestInitialize]
-        public void SetUp() 
+        public void SetUp()
         {
             _scrubber = new Scrubber();
         }
 
         [TestMethod]
-        public void ScrubToExpando_MatchesExpected_UsingSuppliedPayload()
+        public void ScrubToJObject_MatchesExpected_UsingSuppliedPayload()
         {
-            var results = _scrubber.ScrubToExpando(_samplePayload);
+            var results = _scrubber.ScrubToJObject(_samplePayload);
 
             Assert.IsNotNull(results);
-            Assert.AreEqual(2, results.contacts.Count);
-            Assert.IsFalse(((IDictionary<string,object>) results.contacts[1]).ContainsKey("wholesaler"));
+            Assert.AreEqual(2, ((JArray) results["contacts"]).Count);
+//            Assert.IsFalse(((IDictionary<string, object>)results.contacts[1]).ContainsKey("wholesaler"));
         }
 
         [TestMethod]
@@ -64,7 +65,7 @@ namespace JSONScrubber.Tests
 
             // The JSONConverter will make the whitespace different between the payloads
             var expectedStripped = Regex.Replace(_expectedPayload, @"\s+", "");
-            var resultsStripped = Regex.Replace(results, @"\s+", "");            
+            var resultsStripped = Regex.Replace(results, @"\s+", "");
 
             Assert.AreEqual(expectedStripped, resultsStripped);
         }
@@ -102,5 +103,26 @@ namespace JSONScrubber.Tests
             Assert.AreEqual(expected, results);
         }
 
+        [TestMethod]
+        public void ScrubToJObject_MatchesExpected_UsingSuppliedPayload_Issue1()
+        {
+            var payload = @"
+        {
+          ""outer"":
+            {
+                ""name"":""something"",
+                ""inner"":{
+                    ""name"":""something else"",
+                    ""otherProperty"":""aValue""
+                }
+            }
+        }
+";
+            var results = _scrubber.ScrubToJObject(payload);
+
+            Assert.IsNotNull(results);
+            Assert.IsNull(results["outer"]["inner"]["name"]);
+        }
+    
     }
 }
