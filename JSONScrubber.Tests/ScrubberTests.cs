@@ -104,7 +104,7 @@ namespace JSONScrubber.Tests
         }
 
         [TestMethod]
-        public void ScrubToJObject_MatchesExpected_UsingSuppliedPayload_Issue1()
+        public void ScrubToJObject_RemovesInnerName_UsingSuppliedPayload_Issue1()
         {
             var payload = @"
         {
@@ -125,7 +125,7 @@ namespace JSONScrubber.Tests
         }
 
         [TestMethod]
-        public void ScrubToJObject_MatchesExpected_UsingSuppliedPayload_Issue2()
+        public void ScrubToJObject_DoesntRemoveInnerName_WhenDifferentRoot_Issue2()
         {
             var payload = @"
         {
@@ -143,7 +143,7 @@ namespace JSONScrubber.Tests
             var results = _scrubber.ScrubToJObject(payload);
 
             Assert.IsNotNull(results);
-            Assert.IsNotNull(results["second"]["inner"]["name"]);
+            Assert.AreEqual("something else",results["second"]["inner"]["name"].Value<string>());
         }
 
 
