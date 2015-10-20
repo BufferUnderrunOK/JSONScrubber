@@ -123,6 +123,29 @@ namespace JSONScrubber.Tests
             Assert.IsNotNull(results);
             Assert.IsNull(results["outer"]["inner"]["name"]);
         }
-    
+
+        [TestMethod]
+        public void ScrubToJObject_MatchesExpected_UsingSuppliedPayload_Issue2()
+        {
+            var payload = @"
+        {
+            ""first"":{
+                ""name"": ""something""
+            },
+            ""second"":{
+                ""inner"":{
+                    ""name"": ""something else"",
+                    ""otherField"":""aValue""
+                }
+             }
+        }
+";
+            var results = _scrubber.ScrubToJObject(payload);
+
+            Assert.IsNotNull(results);
+            Assert.IsNotNull(results["second"]["inner"]["name"]);
+        }
+
+
     }
 }

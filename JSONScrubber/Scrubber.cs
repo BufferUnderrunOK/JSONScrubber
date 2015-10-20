@@ -48,13 +48,15 @@ namespace JSONScrubber
             if (container == null)
                 return false;
 
-            var key = tokenPath.Split('.').LastOrDefault();
             var result = DoesParentHaveSaidKey(container.Parent, tokenPath);
 
-            foreach (var desc in container.Descendants())
+            var key = tokenPath.Split('.').LastOrDefault();
+
+            foreach (var desc in container.Values())
             {
-                if (desc.Path.Length < tokenPath.Length && desc.Path.EndsWith(key)) { 
-                    result = true;
+                var descPath = desc.Path.Split('.');
+                if (descPath.Length < tokenPath.Split('.').Length && descPath.Last() == key) { 
+                    result = result || true;
                     break;  
                 }
             }
